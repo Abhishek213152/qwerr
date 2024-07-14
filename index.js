@@ -7,29 +7,40 @@ const stripe = require("stripe")(
 const app = express();
 
 app.use(cors());
-app.use(express.json()); // Middleware to parse JSON bodies
 
 app.get("/", (req, res) => {
   res.send("Hello World");
 });
 
 app.post("/payment", async (req, res) => {
-  const { amount } = req.body; // Get the amount from the request body
+  const product = await stripe.products.create({
+    name: "T-Shirt",
+  });
 
-  try {
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount, // Set the amount from the request
+  if (product) {
+    var price = await stripe.prices.create({
+      product: `${product.id}`,
+      unit_amount: 8000 * 100,
       currency: "inr",
-      payment_method_types: ["card"],
     });
-
-    res.json({
-      client_secret: paymentIntent.client_secret,
-    });
-  } catch (error) {
-    console.error("Error creating payment intent:", error.message);
-    res.status(500).json({ error: error.message });
   }
+
+  if (price.id) {
+    var session = await stripe.checkout.sessions.create({
+      line_items: [
+        {
+          price: `${price.id}`,
+          quantity: 1,
+        },
+      ],
+      mode: "payment",
+      success_url: "http://localhost:3000/success",
+      cancel_url: "http://localhost:3000/cancel",
+      customer_email: "demo@gmail.com",
+    });
+  }
+
+  res.json(session);
 });
 
 app.listen(3000, () => {
