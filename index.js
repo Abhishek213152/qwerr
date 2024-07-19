@@ -7,12 +7,14 @@ const stripe = require("stripe")(
 const app = express();
 
 app.use(cors());
+app.use(express.json()); // Add this line to parse JSON data
 
-app.get("/", (req, res) => {
-  res.send("Hello World");
+app.get("/success", (req, res) => {
+  res.send("Payment successfully completed");
 });
 
 app.post("/payment", async (req, res) => {
+  const { amount } = req.body;
   const product = await stripe.products.create({
     name: "T-Shirt",
   });
@@ -20,7 +22,7 @@ app.post("/payment", async (req, res) => {
   if (product) {
     var price = await stripe.prices.create({
       product: `${product.id}`,
-      unit_amount: 8000 * 100,
+      unit_amount: amount * 100, // convert amount to cents
       currency: "inr",
     });
   }
@@ -34,7 +36,7 @@ app.post("/payment", async (req, res) => {
         },
       ],
       mode: "payment",
-      success_url: "http://localhost:3000/success",
+      success_url: "http://localhost:5173/success",
       cancel_url: "http://localhost:3000/cancel",
       customer_email: "demo@gmail.com",
     });
